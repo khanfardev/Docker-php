@@ -1,0 +1,79 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - 80:80
+    volumes:
+      - ./smartcms:/var/www
+      - ./nginx-conf/:/etc/nginx/conf.d/
+  php:
+    image: ammardev0/php
+    volumes:
+      - ./smartcms:/var/www
+    ports:
+      - 6001:6001
+    working_dir: /var/www
+
+  mysql:
+    image: mysql:5.7.29
+    restart: unless-stopped
+    tty: true
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: homestead
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+    depends_on:
+      - mysql
+    ports:
+      - 8080:80
+    volumes:
+      - /sessions
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      - cluster.name=laradock-cluster
+      - node.name=laradock-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.initial_master_nodes=laradock-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    depends_on:
+      - php
+
+  memcached:
+    image: memcached
+    ports:
+      - 11211:11211
+  redis:
+    image: redis
+    expose:
+      - 6379
+
+
+volumes:
+  dbdata:
+  elasticsearch:
